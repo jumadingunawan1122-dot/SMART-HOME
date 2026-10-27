@@ -1,0 +1,831 @@
+<!DOCTYPE html>
+<html lang="id" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Smart Home IoT Dashboard</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        // Tailwind dark mode configuration
+        tailwind.config = {
+            darkMode: 'class',
+        }
+    </script>
+    <!-- FontAwesome for modern icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Google Font Inter -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            transition: background-color 0.4s ease, color 0.4s ease;
+        }
+
+        /* Glassmorphism for Dark Mode */
+        .dark .glass-card {
+            background: rgba(30, 41, 59, 0.75);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.3);
+        }
+
+        /* Glassmorphism for Light Mode */
+        .glass-card {
+            background: rgba(255, 255, 255, 0.85);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(226, 232, 240, 0.8);
+            box-shadow: 0 10px 25px -5px rgba(148, 163, 184, 0.15);
+        }
+
+        /* Range Slider Styling */
+        input[type=range]::-webkit-slider-thumb {
+            background: #3b82f6;
+            transition: transform 0.1s ease;
+        }
+        input[type=range]::-webkit-slider-thumb:hover {
+            transform: scale(1.25);
+        }
+
+        /* Pulse glow animation for active states */
+        @keyframes pulse-glow {
+            0%, 100% { opacity: 1; transform: scale(1); }
+            50% { opacity: 0.6; transform: scale(1.03); }
+        }
+        .animate-glow {
+            animation: pulse-glow 1.8s infinite ease-in-out;
+        }
+
+        /* System disabled state overlay */
+        .system-disabled {
+            opacity: 0.35;
+            pointer-events: none;
+            filter: grayscale(0.9);
+        }
+
+        /* Shake animation for invalid login */
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            20%, 60% { transform: translateX(-8px); }
+            40%, 80% { transform: translateX(8px); }
+        }
+        .animate-shake {
+            animation: shake 0.4s ease-in-out;
+        }
+    </style>
+</head>
+<body class="bg-slate-100 text-slate-800 dark:bg-slate-950 dark:text-slate-100 min-h-screen p-4 sm:p-6 lg:p-8 flex flex-col justify-between transition-colors duration-400">
+
+    <!-- LOGIN SCREEN OVERLAY -->
+    <div id="login-overlay" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md transition-opacity duration-500">
+        <div id="login-card" class="glass-card w-full max-w-md rounded-2xl p-6 sm:p-8 shadow-2xl relative overflow-hidden transition-all duration-300">
+            <!-- Theme toggle on login screen -->
+            <button onclick="toggleTheme()" class="absolute top-4 right-4 text-slate-400 hover:text-slate-200 text-sm p-2 rounded-lg bg-slate-200/50 dark:bg-slate-800/50 transition">
+                <i id="login-theme-icon" class="fa-solid fa-moon"></i>
+            </button>
+
+            <div class="text-center mb-6">
+                <div class="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-blue-600/10 dark:bg-blue-600/20 text-blue-600 dark:text-blue-400 mb-3 border border-blue-500/30">
+                    <i class="fa-solid fa-user-shield text-2xl"></i>
+                </div>
+                <h2 class="text-xl font-extrabold text-slate-900 dark:text-white">SMART HOME</h2>
+                <p class="text-xs text-slate-500 dark:text-slate-400 mt-1">Sistem Otomasi & Monitoring IoT</p>
+            </div>
+
+            <form onsubmit="handleLogin(event)" class="space-y-4">
+                <!-- Username Input -->
+                <div>
+                    <label class="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">USERNAME</label>
+                    <div class="relative">
+                        <span class="absolute inset-y-0 left-0 flex items-center pl-3 text-slate-400">
+                            <i class="fa-solid fa-user text-sm"></i>
+                        </span>
+                        <input type="text" id="login-username" required placeholder="Masukkan Username"
+                            class="w-full pl-10 pr-4 py-2.5 bg-slate-50 dark:bg-slate-900/80 border border-slate-300 dark:border-slate-700 rounded-xl text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-blue-500 text-slate-900 dark:text-white transition">
+                    </div>
+                </div>
+
+                <!-- Password Input -->
+                <div>
+                    <label class="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">PASSWORD</label>
+                    <div class="relative">
+                        <span class="absolute inset-y-0 left-0 flex items-center pl-3 text-slate-400">
+                            <i class="fa-solid fa-lock text-sm"></i>
+                        </span>
+                        <input type="password" id="login-password" required placeholder="••••••••"
+                            class="w-full pl-10 pr-10 py-2.5 bg-slate-50 dark:bg-slate-900/80 border border-slate-300 dark:border-slate-700 rounded-xl text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-blue-500 text-slate-900 dark:text-white transition">
+                        <button type="button" onclick="togglePasswordVisibility()" class="absolute inset-y-0 right-0 pr-3 flex items-center text-slate-400 hover:text-slate-200">
+                            <i id="password-toggle-icon" class="fa-solid fa-eye text-sm"></i>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Error Alert Message -->
+                <div id="login-error" class="hidden text-xs bg-rose-500/15 border border-rose-500/30 text-rose-600 dark:text-rose-400 p-2.5 rounded-lg flex items-center gap-2">
+                    <i class="fa-solid fa-circle-exclamation"></i>
+                    <span id="login-error-msg">Username atau Password salah!</span>
+                </div>
+
+                <!-- Login Submit Button -->
+                <button type="submit" class="w-full bg-blue-600 hover:bg-blue-500 active:scale-95 text-white font-bold py-2.5 rounded-xl text-sm transition shadow-lg flex items-center justify-center gap-2 mt-2">
+                    <i class="fa-solid fa-right-to-bracket"></i> MASUK DASHBOARD
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <!-- MAIN DASHBOARD CONTENT CONTAINER -->
+    <div id="dashboard-wrapper" class="hidden flex-col justify-between min-h-screen">
+
+        <!-- TOP HEADER -->
+        <header class="glass-card rounded-2xl p-4 sm:p-6 mb-6 flex flex-col lg:flex-row items-center justify-between gap-4 shadow-xl">
+            <div class="flex items-center space-x-3 w-full lg:w-auto justify-between lg:justify-start">
+                <div class="flex items-center space-x-3">
+                    <div id="header-icon-bg" class="bg-blue-600/10 dark:bg-blue-600/20 p-3 rounded-xl border border-blue-500/30 text-blue-600 dark:text-blue-400 transition-colors duration-300">
+                        <i class="fa-solid fa-house-chimney text-2xl"></i>
+                    </div>
+                    <div>
+                        <h1 class="text-lg sm:text-2xl font-extrabold tracking-tight text-slate-900 dark:text-white">SMART HOME</h1>
+                        <div class="flex items-center space-x-2 mt-0.5">
+                            <span id="system-status-dot" class="inline-block w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse"></span>
+                            <span id="system-status-text" class="text-xs sm:text-sm font-semibold text-emerald-600 dark:text-emerald-400">Status: ONLINE</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- HEADER CONTROLS: USER PROFILE, THEME TOGGLE, MASTER SWITCH, CLOCK -->
+            <div class="flex flex-wrap items-center gap-3 sm:gap-4 justify-center sm:justify-end w-full lg:w-auto">
+                
+                <!-- USER SESSION & LOGOUT BUTTON -->
+                <div class="flex items-center space-x-2 bg-slate-200/80 dark:bg-slate-800/90 px-3 py-2 rounded-xl border border-slate-300 dark:border-slate-700/80 shadow-sm">
+                    <div class="w-8 h-8 rounded-lg bg-blue-600 text-white flex items-center justify-center font-bold text-xs">
+                        <i class="fa-solid fa-user"></i>
+                    </div>
+                    <div class="text-left">
+                        <span id="user-display-name" class="text-xs font-bold text-slate-900 dark:text-white block">Kelompok2_TRE_MA</span>
+                        <span class="text-[10px] text-emerald-600 dark:text-emerald-400 font-semibold">Tersambung</span>
+                    </div>
+                    <button onclick="handleLogout()" class="ml-2 text-xs bg-rose-500/10 hover:bg-rose-500 text-rose-600 hover:text-white dark:text-rose-400 px-2.5 py-1.5 rounded-lg font-bold transition flex items-center gap-1" title="Keluar">
+                        <i class="fa-solid fa-power-off"></i> Logout
+                    </button>
+                </div>
+
+                <!-- 1. LIGHT / DARK MODE TOGGLE BUTTON -->
+                <button id="theme-toggle-btn" onclick="toggleTheme()" class="flex items-center space-x-2 bg-slate-200/80 dark:bg-slate-800/90 hover:bg-slate-300 dark:hover:bg-slate-700 text-slate-700 dark:text-amber-400 px-3.5 py-2.5 rounded-xl border border-slate-300 dark:border-slate-700/80 transition-all duration-300 shadow-sm" title="Ubah Tema (Terang/Gelap)">
+                    <i id="theme-toggle-icon" class="fa-solid fa-moon text-lg"></i>
+                    <span id="theme-toggle-text" class="text-xs font-bold hidden sm:inline">MODE GELAP</span>
+                </button>
+
+                <!-- 2. MASTER POWER SWITCH TOGGLE -->
+                <div class="bg-slate-200/80 dark:bg-slate-800/90 px-4 py-2.5 rounded-xl border border-slate-300 dark:border-slate-700/80 flex items-center space-x-3 shadow-sm">
+                    <div class="flex flex-col">
+                        <span class="text-[10px] text-slate-500 dark:text-slate-400 uppercase font-bold tracking-wider">Master Power</span>
+                        <span id="master-power-label" class="text-xs font-black text-emerald-600 dark:text-emerald-400">SYSTEM ON</span>
+                    </div>
+                    <label class="relative inline-flex items-center cursor-pointer">
+                        <input type="checkbox" id="master-power-toggle" class="sr-only peer" checked onchange="toggleMasterPower()">
+                        <div class="w-12 h-6 bg-rose-600 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-emerald-600"></div>
+                    </label>
+                </div>
+
+                <!-- 3. REAL-TIME CLOCK & DATE -->
+                <div class="flex items-center space-x-3 bg-slate-200/80 dark:bg-slate-800/90 px-4 py-2.5 rounded-xl border border-slate-300 dark:border-slate-700/80 shadow-sm">
+                    <div class="text-right">
+                        <div id="current-date" class="text-xs text-slate-500 dark:text-slate-400 font-medium">Senin, 26 Okt 2026</div>
+                        <div id="current-time" class="text-base sm:text-lg font-bold text-slate-900 dark:text-white tracking-wider">16:09:00</div>
+                    </div>
+                    <div class="text-blue-600 dark:text-blue-400 pl-2 border-l border-slate-300 dark:border-slate-700">
+                        <i class="fa-regular fa-clock text-xl"></i>
+                    </div>
+                </div>
+            </div>
+        </header>
+
+        <!-- MAIN GRID DASHBOARD CONTAINER -->
+        <main id="dashboard-main-content" class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6 transition-all duration-300">
+
+            <!-- SECTION 1: KONTROL LAMPU KAMAR -->
+            <section class="glass-card rounded-2xl p-5 sm:p-6 shadow-xl flex flex-col justify-between">
+                <div class="flex items-center justify-between mb-5 pb-3 border-b border-slate-200 dark:border-slate-700/60">
+                    <h2 class="text-sm font-bold tracking-wider text-slate-700 dark:text-slate-300 uppercase flex items-center gap-2">
+                        <i class="fa-solid fa-lightbulb text-amber-500 dark:text-amber-400"></i> [ KONTROL LAMPU KAMAR ]
+                    </h2>
+                    <span class="text-xs bg-slate-200 dark:bg-slate-800 px-2.5 py-1 rounded-full text-slate-600 dark:text-slate-400 font-medium">Dimming Control</span>
+                </div>
+
+                <div class="space-y-6">
+                    <!-- Lampu Kamar 1 -->
+                    <div class="bg-slate-100/80 dark:bg-slate-800/50 p-4 rounded-xl border border-slate-200 dark:border-slate-700/40 transition-colors">
+                        <div class="flex items-center justify-between mb-3">
+                            <div class="flex items-center space-x-3">
+                                <div id="icon-lamp1" class="w-10 h-10 rounded-lg flex items-center justify-center bg-slate-200 dark:bg-slate-700 text-slate-400 transition-all duration-300">
+                                    <i class="fa-solid fa-lightbulb text-lg"></i>
+                                </div>
+                                <div>
+                                    <span class="font-bold text-slate-900 dark:text-white block">Lampu Kamar 1</span>
+                                    <span id="status-text-lamp1" class="text-xs text-slate-500 dark:text-slate-400 font-medium">Status: OFF</span>
+                                </div>
+                            </div>
+                            <!-- Toggle Switch ON/OFF -->
+                            <label class="relative inline-flex items-center cursor-pointer">
+                                <input type="checkbox" id="toggle-lamp1" class="sr-only peer" onchange="updateLamp1()">
+                                <div class="w-11 h-6 bg-slate-300 dark:bg-slate-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+                                <span class="ml-2 text-xs font-bold text-slate-500 dark:text-slate-300 peer-checked:text-blue-600 dark:peer-checked:text-blue-400 w-8" id="label-toggle1">OFF</span>
+                            </label>
+                        </div>
+                        <!-- Slider Dimming -->
+                        <div class="mt-2">
+                            <div class="flex justify-between text-xs text-slate-500 dark:text-slate-400 font-medium mb-1">
+                                <span>Slider Dimming</span>
+                                <span id="slider-val-1" class="font-bold text-blue-600 dark:text-blue-400">75%</span>
+                            </div>
+                            <input type="range" id="slider-lamp1" min="0" max="100" value="75" class="w-full h-2 bg-slate-200 dark:bg-slate-700 rounded-lg appearance-none cursor-pointer accent-blue-600 dark:accent-blue-500" oninput="updateSlider1(this.value)">
+                        </div>
+                    </div>
+
+                    <!-- Lampu Kamar 2 -->
+                    <div class="bg-slate-100/80 dark:bg-slate-800/50 p-4 rounded-xl border border-slate-200 dark:border-slate-700/40 transition-colors">
+                        <div class="flex items-center justify-between mb-3">
+                            <div class="flex items-center space-x-3">
+                                <div id="icon-lamp2" class="w-10 h-10 rounded-lg flex items-center justify-center bg-slate-200 dark:bg-slate-700 text-slate-400 transition-all duration-300">
+                                    <i class="fa-solid fa-lightbulb text-lg"></i>
+                                </div>
+                                <div>
+                                    <span class="font-bold text-slate-900 dark:text-white block">Lampu Kamar 2</span>
+                                    <span id="status-text-lamp2" class="text-xs text-slate-500 dark:text-slate-400 font-medium">Status: OFF</span>
+                                </div>
+                            </div>
+                            <!-- Toggle Switch ON/OFF -->
+                            <label class="relative inline-flex items-center cursor-pointer">
+                                <input type="checkbox" id="toggle-lamp2" class="sr-only peer" onchange="updateLamp2()">
+                                <div class="w-11 h-6 bg-slate-300 dark:bg-slate-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+                                <span class="ml-2 text-xs font-bold text-slate-500 dark:text-slate-300 peer-checked:text-blue-600 dark:peer-checked:text-blue-400 w-8" id="label-toggle2">OFF</span>
+                            </label>
+                        </div>
+                        <!-- Slider Dimming -->
+                        <div class="mt-2">
+                            <div class="flex justify-between text-xs text-slate-500 dark:text-slate-400 font-medium mb-1">
+                                <span>Slider Dimming</span>
+                                <span id="slider-val-2" class="font-bold text-blue-600 dark:text-blue-400">30%</span>
+                            </div>
+                            <input type="range" id="slider-lamp2" min="0" max="100" value="30" class="w-full h-2 bg-slate-200 dark:bg-slate-700 rounded-lg appearance-none cursor-pointer accent-blue-600 dark:accent-blue-500" oninput="updateSlider2(this.value)">
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- SECTION 2: MONITORING RUANGAN -->
+            <section class="glass-card rounded-2xl p-5 sm:p-6 shadow-xl flex flex-col justify-between">
+                <div class="flex items-center justify-between mb-5 pb-3 border-b border-slate-200 dark:border-slate-700/60">
+                    <h2 class="text-sm font-bold tracking-wider text-slate-700 dark:text-slate-300 uppercase flex items-center gap-2">
+                        <i class="fa-solid fa-chart-line text-emerald-600 dark:text-emerald-400"></i> [ MONITORING RUANGAN ]
+                    </h2>
+                    <span class="text-xs bg-slate-200 dark:bg-slate-800 px-2.5 py-1 rounded-full text-slate-600 dark:text-slate-400 font-medium">Sensor DHT22</span>
+                </div>
+
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 h-full">
+                    <!-- Temperatur Widget -->
+                    <div class="bg-slate-100/80 dark:bg-slate-800/50 p-5 rounded-xl border border-slate-200 dark:border-slate-700/40 flex flex-col justify-between items-center text-center">
+                        <div class="w-full flex items-center justify-between">
+                            <span class="text-xs font-semibold text-slate-600 dark:text-slate-400 flex items-center gap-1.5">
+                                <i class="fa-solid fa-temperature-half text-rose-500 text-sm"></i> Temperatur
+                            </span>
+                            <span id="temp-badge" class="text-[10px] font-bold bg-rose-500/15 text-rose-600 dark:text-rose-300 px-2 py-0.5 rounded">Real-time</span>
+                        </div>
+                        <div class="my-4">
+                            <div id="temp-value" class="text-4xl font-extrabold text-slate-900 dark:text-white tracking-tight">28.5 <span class="text-lg font-medium text-slate-400">°C</span></div>
+                        </div>
+                        <div class="w-full bg-slate-200 dark:bg-slate-700/60 rounded-full h-2 overflow-hidden">
+                            <div id="temp-bar" class="bg-gradient-to-r from-blue-500 to-rose-500 h-full rounded-full transition-all duration-500" style="width: 57%;"></div>
+                        </div>
+                    </div>
+
+                    <!-- Kelembapan Widget -->
+                    <div class="bg-slate-100/80 dark:bg-slate-800/50 p-5 rounded-xl border border-slate-200 dark:border-slate-700/40 flex flex-col justify-between items-center text-center">
+                        <div class="w-full flex items-center justify-between">
+                            <span class="text-xs font-semibold text-slate-600 dark:text-slate-400 flex items-center gap-1.5">
+                                <i class="fa-solid fa-droplet text-blue-500 dark:text-blue-400 text-sm"></i> Kelembapan
+                            </span>
+                            <span id="hum-badge" class="text-[10px] font-bold bg-blue-500/15 text-blue-600 dark:text-blue-300 px-2 py-0.5 rounded">Humidity</span>
+                        </div>
+                        <div class="my-4">
+                            <div id="hum-value" class="text-4xl font-extrabold text-slate-900 dark:text-white tracking-tight">65 <span class="text-lg font-medium text-slate-400">%</span></div>
+                        </div>
+                        <div class="w-full bg-slate-200 dark:bg-slate-700/60 rounded-full h-2 overflow-hidden">
+                            <div id="hum-bar" class="bg-gradient-to-r from-cyan-500 to-blue-600 h-full rounded-full transition-all duration-500" style="width: 65%;"></div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- SECTION 3: KEAMANAN & SENSOR PIR -->
+            <section class="glass-card rounded-2xl p-5 sm:p-6 shadow-xl flex flex-col justify-between">
+                <div class="flex items-center justify-between mb-5 pb-3 border-b border-slate-200 dark:border-slate-700/60">
+                    <h2 class="text-sm font-bold tracking-wider text-slate-700 dark:text-slate-300 uppercase flex items-center gap-2">
+                        <i class="fa-solid fa-shield-halved text-purple-600 dark:text-purple-400"></i> [ KEAMANAN & SENSOR PIR ]
+                    </h2>
+                    <span class="text-xs bg-slate-200 dark:bg-slate-800 px-2.5 py-1 rounded-full text-slate-600 dark:text-slate-400 font-medium">Motion Security</span>
+                </div>
+
+                <div class="space-y-4">
+                    <!-- Mode PIR Toggle Switch -->
+                    <div class="bg-slate-100/80 dark:bg-slate-800/50 p-4 rounded-xl border border-slate-200 dark:border-slate-700/40 flex items-center justify-between">
+                        <div>
+                            <span class="font-bold text-slate-900 dark:text-white block text-sm">Mode Sensor PIR</span>
+                            <span id="pir-mode-desc" class="text-xs text-slate-500 dark:text-slate-400">Standby: Buzzer + Lampu Garasi Aktif</span>
+                        </div>
+                        <label class="relative inline-flex items-center cursor-pointer">
+                            <input type="checkbox" id="toggle-pir-mode" class="sr-only peer" checked onchange="updatePirMode()">
+                            <div class="w-14 h-7 bg-slate-300 dark:bg-slate-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-6 after:w-6 after:transition-all peer-checked:bg-emerald-600"></div>
+                            <span class="ml-2 text-xs font-extrabold text-emerald-600 dark:text-emerald-400 w-20" id="pir-mode-label">STANBY</span>
+                        </label>
+                    </div>
+
+                    <!-- Simulation Trigger Button -->
+                    <div class="bg-blue-50 dark:bg-blue-950/30 p-3.5 rounded-xl border border-blue-200 dark:border-blue-500/20 flex items-center justify-between">
+                        <div>
+                            <span class="text-xs text-blue-700 dark:text-blue-300 font-bold block">Simulasi Pergerakan</span>
+                            <span class="text-[11px] text-slate-500 dark:text-slate-400">Tekan untuk memicu sensor PIR</span>
+                        </div>
+                        <button id="btn-pir-sim" onclick="triggerPirMotion()" class="bg-blue-600 hover:bg-blue-500 active:scale-95 text-white text-xs font-bold px-4 py-2 rounded-lg transition shadow-md flex items-center gap-1.5">
+                            <i class="fa-solid fa-person-running"></i> Simulasi Gerakan
+                        </button>
+                    </div>
+
+                    <!-- Status Visual Indicators (Buzzer & Lampu Garasi) -->
+                    <div class="grid grid-cols-2 gap-3">
+                        <!-- Buzzer Status -->
+                        <div id="box-buzzer" class="bg-slate-100/80 dark:bg-slate-800/50 p-3.5 rounded-xl border border-slate-200 dark:border-slate-700/40 flex flex-col justify-between">
+                            <div class="flex items-center justify-between mb-2">
+                                <span class="text-xs font-semibold text-slate-600 dark:text-slate-400 flex items-center gap-1">
+                                    <i class="fa-solid fa-bullhorn"></i> Buzzer
+                                </span>
+                                <span id="buzzer-dot" class="w-2.5 h-2.5 rounded-full bg-slate-400 dark:bg-slate-600"></span>
+                            </div>
+                            <div>
+                                <div id="buzzer-status-text" class="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase">OFF</div>
+                                <div id="buzzer-subtext" class="text-[10px] text-slate-400 dark:text-slate-500">Buzzer Mati</div>
+                            </div>
+                        </div>
+
+                        <!-- Lampu Garasi Status -->
+                        <div id="box-garage" class="bg-slate-100/80 dark:bg-slate-800/50 p-3.5 rounded-xl border border-slate-200 dark:border-slate-700/40 flex flex-col justify-between">
+                            <div class="flex items-center justify-between mb-2">
+                                <span class="text-xs font-semibold text-slate-600 dark:text-slate-400 flex items-center gap-1">
+                                    <i class="fa-solid fa-car"></i> Lampu Garasi
+                                </span>
+                                <span id="garage-dot" class="w-2.5 h-2.5 rounded-full bg-slate-400 dark:bg-slate-600"></span>
+                            </div>
+                            <div>
+                                <div id="garage-status-text" class="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase">MATI</div>
+                                <div id="garage-subtext" class="text-[10px] text-slate-400 dark:text-slate-500">Lampu Padam</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- SECTION 4: STATUS GERBANG & CAHAYA -->
+            <section class="glass-card rounded-2xl p-5 sm:p-6 shadow-xl flex flex-col justify-between">
+                <div class="flex items-center justify-between mb-5 pb-3 border-b border-slate-200 dark:border-slate-700/60">
+                    <h2 class="text-sm font-bold tracking-wider text-slate-700 dark:text-slate-300 uppercase flex items-center gap-2">
+                        <i class="fa-solid fa-network-wired text-cyan-600 dark:text-cyan-400"></i> [ STATUS GERBANG & CAHAYA ]
+                    </h2>
+                    <span class="text-xs bg-slate-200 dark:bg-slate-800 px-2.5 py-1 rounded-full text-slate-600 dark:text-slate-400 font-medium">Sensors IO</span>
+                </div>
+
+                <div class="space-y-4">
+                    <!-- Sensor LDR (Cahaya) -->
+                    <div class="bg-slate-100/80 dark:bg-slate-800/50 p-4 rounded-xl border border-slate-200 dark:border-slate-700/40 flex items-center justify-between">
+                        <div class="flex items-center space-x-3">
+                            <div id="ldr-icon-bg" class="w-10 h-10 rounded-xl bg-amber-500/20 text-amber-500 dark:text-amber-400 flex items-center justify-center">
+                                <i id="ldr-icon" class="fa-solid fa-sun text-lg"></i>
+                            </div>
+                            <div>
+                                <span class="text-xs font-semibold text-slate-500 dark:text-slate-400">Sensor LDR (Cahaya)</span>
+                                <div id="ldr-status" class="text-base font-bold text-amber-500 dark:text-amber-400 tracking-wide">PAGI</div>
+                            </div>
+                        </div>
+                        <div class="text-right flex items-center space-x-2">
+                            <div>
+                                <span class="text-xs text-slate-500 dark:text-slate-400 block">Intensitas</span>
+                                <span id="ldr-lux" class="text-sm font-bold text-slate-900 dark:text-white">450 Lux</span>
+                            </div>
+                            <button id="btn-ldr" onclick="toggleLdr()" class="bg-slate-200 dark:bg-slate-700 hover:bg-slate-300 dark:hover:bg-slate-600 text-slate-800 dark:text-white text-xs font-semibold px-3 py-1.5 rounded-lg transition shadow-sm">Ubah</button>
+                        </div>
+                    </div>
+
+                    <!-- Sensor IR (Gerbang) -->
+                    <div class="bg-slate-100/80 dark:bg-slate-800/50 p-4 rounded-xl border border-slate-200 dark:border-slate-700/40 flex items-center justify-between">
+                        <div class="flex items-center space-x-3">
+                            <div id="gate-icon-bg" class="w-10 h-10 rounded-xl bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 flex items-center justify-center">
+                                <i id="gate-icon" class="fa-solid fa-door-closed text-lg"></i>
+                            </div>
+                            <div>
+                                <span class="text-xs font-semibold text-slate-500 dark:text-slate-400">Sensor IR (Gerbang)</span>
+                                <div id="gate-status" class="text-base font-bold text-emerald-600 dark:text-emerald-400 tracking-wide">TERTUTUP</div>
+                            </div>
+                        </div>
+                        <div class="text-right flex items-center space-x-2">
+                            <div>
+                                <span class="text-xs text-slate-500 dark:text-slate-400 block">Status Jalur</span>
+                                <span id="gate-signal" class="text-xs text-emerald-600 dark:text-emerald-400 font-bold">Aman / Terhubung</span>
+                            </div>
+                            <button id="btn-gate" onclick="toggleGate()" class="bg-slate-200 dark:bg-slate-700 hover:bg-slate-300 dark:hover:bg-slate-600 text-slate-800 dark:text-white text-xs font-semibold px-3 py-1.5 rounded-lg transition shadow-sm">Ubah</button>
+                        </div>
+                    </div>
+
+                    <!-- Quick Information Summary Banner -->
+                    <div class="bg-slate-200/60 dark:bg-slate-900/60 p-3 rounded-xl border border-slate-300/80 dark:border-slate-800 text-center">
+                        <p id="info-banner-text" class="text-[11px] text-slate-600 dark:text-slate-400 font-medium">
+                            <i class="fa-solid fa-circle-info text-blue-600 dark:text-blue-400 mr-1"></i> Sistem IoT otomatis aktif menyinkronkan data sensor secara real-time via MQTT/WebSocket.
+                        </p>
+                    </div>
+                </div>
+            </section>
+
+        </main>
+
+        <!-- FOOTER -->
+        <footer class="text-center text-xs text-slate-500 dark:text-slate-500 py-3 border-t border-slate-200 dark:border-slate-800/80">
+            &copy; 2026 Smart Home IoT Systems &bull; Built with HTML5, Tailwind CSS & JavaScript.
+        </footer>
+    </div>
+
+    <!-- JAVASCRIPT LOGIC -->
+    <script>
+        // Updated Authentication Logic with requested credentials
+        const VALID_USER = "Kelompok2_TRE_MA";
+        const VALID_PASS = "25241710";
+
+        function handleLogin(e) {
+            e.preventDefault();
+            const userInput = document.getElementById('login-username').value.trim();
+            const passInput = document.getElementById('login-password').value;
+            const errorDiv = document.getElementById('login-error');
+            const loginCard = document.getElementById('login-card');
+
+            if (userInput === VALID_USER && passInput === VALID_PASS) {
+                // Success: Hide overlay and show main dashboard UI
+                const overlay = document.getElementById('login-overlay');
+                overlay.classList.add('opacity-0');
+                setTimeout(() => {
+                    overlay.classList.add('hidden');
+                    document.getElementById('dashboard-wrapper').classList.remove('hidden');
+                    document.getElementById('dashboard-wrapper').classList.add('flex');
+                    document.getElementById('user-display-name').textContent = userInput;
+                }, 400);
+            } else {
+                // Error feedback
+                errorDiv.classList.remove('hidden');
+                loginCard.classList.add('animate-shake');
+                setTimeout(() => {
+                    loginCard.classList.remove('animate-shake');
+                }, 500);
+            }
+        }
+
+        function handleLogout() {
+            const overlay = document.getElementById('login-overlay');
+            overlay.classList.remove('hidden');
+            setTimeout(() => {
+                overlay.classList.remove('opacity-0');
+                document.getElementById('dashboard-wrapper').classList.add('hidden');
+                document.getElementById('dashboard-wrapper').classList.remove('flex');
+                document.getElementById('login-password').value = '';
+                document.getElementById('login-error').classList.add('hidden');
+            }, 50);
+        }
+
+        function togglePasswordVisibility() {
+            const passInput = document.getElementById('login-password');
+            const icon = document.getElementById('password-toggle-icon');
+            if (passInput.type === 'password') {
+                passInput.type = 'text';
+                icon.className = 'fa-solid fa-eye-slash text-sm';
+            } else {
+                passInput.type = 'password';
+                icon.className = 'fa-solid fa-eye text-sm';
+            }
+        }
+
+        // 1. Theme Management (Light / Dark Mode)
+        let isDarkMode = true;
+
+        function toggleTheme() {
+            isDarkMode = !isDarkMode;
+            const html = document.documentElement;
+            const icon = document.getElementById('theme-toggle-icon');
+            const text = document.getElementById('theme-toggle-text');
+            const loginThemeIcon = document.getElementById('login-theme-icon');
+
+            if (isDarkMode) {
+                html.classList.add('dark');
+                if (icon) icon.className = 'fa-solid fa-moon text-lg';
+                if (text) text.textContent = 'MODE GELAP';
+                if (loginThemeIcon) loginThemeIcon.className = 'fa-solid fa-moon';
+            } else {
+                html.classList.remove('dark');
+                if (icon) icon.className = 'fa-solid fa-sun text-lg text-amber-500';
+                if (text) text.textContent = 'MODE TERANG';
+                if (loginThemeIcon) loginThemeIcon.className = 'fa-solid fa-sun text-amber-500';
+            }
+        }
+
+        // 2. Real-Time Clock & Date Updates (Indonesian)
+        function updateClock() {
+            const now = new Date();
+            const hours = String(now.getHours()).padStart(2, '0');
+            const minutes = String(now.getMinutes()).padStart(2, '0');
+            const seconds = String(now.getSeconds()).padStart(2, '0');
+            document.getElementById('current-time').textContent = `${hours}:${minutes}:${seconds}`;
+
+            const options = { weekday: 'long', year: 'numeric', month: 'short', day: 'numeric' };
+            document.getElementById('current-date').textContent = now.toLocaleDateString('id-ID', options);
+        }
+        setInterval(updateClock, 1000);
+        updateClock();
+
+        // 3. System State Management
+        let masterPower = true; // True = SYSTEM ON, False = SYSTEM SHUTDOWN
+        let motionTimeout = null;
+
+        let state = {
+            lamp1: { active: false, dim: 75 },
+            lamp2: { active: false, dim: 30 },
+            pirMode: 'STANBY', // STANBY or NON-STANBY
+            buzzer: false,
+            garageLamp: false,
+            ldr: 'PAGI', // PAGI or MALAM
+            gate: 'TERTUTUP' // TERBUKA or TERTUTUP
+        };
+
+        // Master Power Switch Toggle Function
+        function toggleMasterPower() {
+            const toggle = document.getElementById('master-power-toggle');
+            masterPower = toggle.checked;
+
+            const mainContent = document.getElementById('dashboard-main-content');
+            const masterLabel = document.getElementById('master-power-label');
+            const statusDot = document.getElementById('system-status-dot');
+            const statusText = document.getElementById('system-status-text');
+            const headerIconBg = document.getElementById('header-icon-bg');
+            const infoBanner = document.getElementById('info-banner-text');
+
+            if (masterPower) {
+                // Restore Dashboard to active state
+                mainContent.classList.remove('system-disabled');
+                masterLabel.textContent = 'SYSTEM ON';
+                masterLabel.className = 'text-xs font-black text-emerald-600 dark:text-emerald-400';
+
+                statusDot.className = 'inline-block w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse';
+                statusText.textContent = 'Status: ONLINE';
+                statusText.className = 'text-xs sm:text-sm font-semibold text-emerald-600 dark:text-emerald-400';
+
+                headerIconBg.className = 'bg-blue-600/10 dark:bg-blue-600/20 p-3 rounded-xl border border-blue-500/30 text-blue-600 dark:text-blue-400 transition-colors duration-300';
+                infoBanner.innerHTML = `<i class="fa-solid fa-circle-info text-blue-600 dark:text-blue-400 mr-1"></i> Sistem IoT otomatis aktif menyinkronkan data sensor secara real-time via MQTT/WebSocket.`;
+            } else {
+                // Shut down Dashboard completely
+                if (motionTimeout) clearTimeout(motionTimeout);
+                
+                // Turn off security alerts visually
+                state.buzzer = false;
+                state.garageLamp = false;
+                updateSecurityUI();
+
+                mainContent.classList.add('system-disabled');
+                masterLabel.textContent = 'SYSTEM OFF';
+                masterLabel.className = 'text-xs font-black text-rose-600 dark:text-rose-500';
+
+                statusDot.className = 'inline-block w-2.5 h-2.5 rounded-full bg-rose-500';
+                statusText.textContent = 'Status: SYSTEM SHUTDOWN (OFF)';
+                statusText.className = 'text-xs sm:text-sm font-semibold text-rose-600 dark:text-rose-400';
+
+                headerIconBg.className = 'bg-rose-600/10 dark:bg-rose-600/20 p-3 rounded-xl border border-rose-500/30 text-rose-600 dark:text-rose-400 transition-colors duration-300';
+                infoBanner.innerHTML = `<i class="fa-solid fa-triangle-exclamation text-amber-500 mr-1"></i> Perhatian: Sistem padam total (Master Shutdown). Mengontrol sensor dinonaktifkan sementara.`;
+            }
+        }
+
+        // Lampu Kamar 1 Control
+        function updateLamp1() {
+            if (!masterPower) return;
+            const toggle = document.getElementById('toggle-lamp1');
+            state.lamp1.active = toggle.checked;
+            document.getElementById('label-toggle1').textContent = state.lamp1.active ? 'ON' : 'OFF';
+            
+            const iconBg = document.getElementById('icon-lamp1');
+            const statusTxt = document.getElementById('status-text-lamp1');
+            
+            if(state.lamp1.active) {
+                iconBg.classList.remove('bg-slate-200', 'dark:bg-slate-700', 'text-slate-400');
+                iconBg.classList.add('bg-amber-500/20', 'text-amber-500', 'dark:text-amber-400', 'shadow-md', 'shadow-amber-500/20');
+                statusTxt.textContent = `Status: ON (${state.lamp1.dim}%)`;
+                statusTxt.className = 'text-xs font-semibold text-amber-600 dark:text-amber-400';
+            } else {
+                iconBg.classList.remove('bg-amber-500/20', 'text-amber-500', 'dark:text-amber-400', 'shadow-md', 'shadow-amber-500/20');
+                iconBg.classList.add('bg-slate-200', 'dark:bg-slate-700', 'text-slate-400');
+                statusTxt.textContent = 'Status: OFF';
+                statusTxt.className = 'text-xs text-slate-500 dark:text-slate-400 font-medium';
+            }
+        }
+
+        function updateSlider1(val) {
+            if (!masterPower) return;
+            state.lamp1.dim = val;
+            document.getElementById('slider-val-1').textContent = val + '%';
+            if(state.lamp1.active) {
+                document.getElementById('status-text-lamp1').textContent = `Status: ON (${val}%)`;
+            }
+        }
+
+        // Lampu Kamar 2 Control
+        function updateLamp2() {
+            if (!masterPower) return;
+            const toggle = document.getElementById('toggle-lamp2');
+            state.lamp2.active = toggle.checked;
+            document.getElementById('label-toggle2').textContent = state.lamp2.active ? 'ON' : 'OFF';
+            
+            const iconBg = document.getElementById('icon-lamp2');
+            const statusTxt = document.getElementById('status-text-lamp2');
+            
+            if(state.lamp2.active) {
+                iconBg.classList.remove('bg-slate-200', 'dark:bg-slate-700', 'text-slate-400');
+                iconBg.classList.add('bg-amber-500/20', 'text-amber-500', 'dark:text-amber-400', 'shadow-md', 'shadow-amber-500/20');
+                statusTxt.textContent = `Status: ON (${state.lamp2.dim}%)`;
+                statusTxt.className = 'text-xs font-semibold text-amber-600 dark:text-amber-400';
+            } else {
+                iconBg.classList.remove('bg-amber-500/20', 'text-amber-500', 'dark:text-amber-400', 'shadow-md', 'shadow-amber-500/20');
+                iconBg.classList.add('bg-slate-200', 'dark:bg-slate-700', 'text-slate-400');
+                statusTxt.textContent = 'Status: OFF';
+                statusTxt.className = 'text-xs text-slate-500 dark:text-slate-400 font-medium';
+            }
+        }
+
+        function updateSlider2(val) {
+            if (!masterPower) return;
+            state.lamp2.dim = val;
+            document.getElementById('slider-val-2').textContent = val + '%';
+            if(state.lamp2.active) {
+                document.getElementById('status-text-lamp2').textContent = `Status: ON (${val}%)`;
+            }
+        }
+
+        // PIR Mode Toggle
+        function updatePirMode() {
+            if (!masterPower) return;
+            const toggle = document.getElementById('toggle-pir-mode');
+            const label = document.getElementById('pir-mode-label');
+            const desc = document.getElementById('pir-mode-desc');
+            
+            if(toggle.checked) {
+                state.pirMode = 'STANBY';
+                label.textContent = 'STANBY';
+                label.className = 'ml-2 text-xs font-extrabold text-emerald-600 dark:text-emerald-400 w-20';
+                desc.textContent = 'Standby: Buzzer + Lampu Garasi Aktif';
+            } else {
+                state.pirMode = 'NON-STANBY';
+                label.textContent = 'NON-STANBY';
+                label.className = 'ml-2 text-xs font-extrabold text-amber-600 dark:text-amber-400 w-20';
+                desc.textContent = 'Non-Standby: Lampu Garasi Saja (Buzzer OFF)';
+            }
+            resetSecurityOutputs();
+        }
+
+        // Reset Security Outputs
+        function resetSecurityOutputs() {
+            state.buzzer = false;
+            state.garageLamp = false;
+            updateSecurityUI();
+        }
+
+        // Simulate PIR Motion Trigger
+        function triggerPirMotion() {
+            if (!masterPower) return;
+            if(state.pirMode === 'STANBY') {
+                state.buzzer = true;
+                state.garageLamp = true;
+            } else {
+                state.buzzer = false;
+                state.garageLamp = true;
+            }
+            updateSecurityUI();
+
+            // Auto turn off simulation after 4 seconds
+            if (motionTimeout) clearTimeout(motionTimeout);
+            motionTimeout = setTimeout(() => {
+                state.buzzer = false;
+                state.garageLamp = false;
+                updateSecurityUI();
+            }, 4000);
+        }
+
+        function updateSecurityUI() {
+            // Buzzer UI
+            const bBox = document.getElementById('box-buzzer');
+            const bDot = document.getElementById('buzzer-dot');
+            const bTxt = document.getElementById('buzzer-status-text');
+            const bSub = document.getElementById('buzzer-subtext');
+
+            if(state.buzzer && masterPower) {
+                bBox.className = "bg-rose-100 dark:bg-rose-950/40 p-3.5 rounded-xl border border-rose-300 dark:border-rose-500/40 flex flex-col justify-between animate-glow";
+                bDot.className = "w-2.5 h-2.5 rounded-full bg-rose-500 animate-ping";
+                bTxt.textContent = "ON";
+                bTxt.className = "text-xs font-bold text-rose-600 dark:text-rose-400 uppercase";
+                bSub.textContent = "Buzzer On!";
+            } else {
+                bBox.className = "bg-slate-100/80 dark:bg-slate-800/50 p-3.5 rounded-xl border border-slate-200 dark:border-slate-700/40 flex flex-col justify-between";
+                bDot.className = "w-2.5 h-2.5 rounded-full bg-slate-400 dark:bg-slate-600";
+                bTxt.textContent = "OFF";
+                bTxt.className = "text-xs font-bold text-slate-500 dark:text-slate-400 uppercase";
+                bSub.textContent = "Buzzer Off";
+            }
+
+            // Garage Lamp UI
+            const gBox = document.getElementById('box-garage');
+            const gDot = document.getElementById('garage-dot');
+            const gTxt = document.getElementById('garage-status-text');
+            const gSub = document.getElementById('garage-subtext');
+
+            if(state.garageLamp && masterPower) {
+                gBox.className = "bg-emerald-100 dark:bg-emerald-950/40 p-3.5 rounded-xl border border-emerald-300 dark:border-emerald-500/40 flex flex-col justify-between";
+                gDot.className = "w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse";
+                gTxt.textContent = "ON";
+                gTxt.className = "text-xs font-bold text-emerald-600 dark:text-emerald-400 uppercase";
+                gSub.textContent = "Lampu Garasi On";
+            } else {
+                gBox.className = "bg-slate-100/80 dark:bg-slate-800/50 p-3.5 rounded-xl border border-slate-200 dark:border-slate-700/40 flex flex-col justify-between";
+                gDot.className = "w-2.5 h-2.5 rounded-full bg-slate-400 dark:bg-slate-600";
+                gTxt.textContent = "OFF";
+                gTxt.className = "text-xs font-bold text-slate-500 dark:text-slate-400 uppercase";
+                gSub.textContent = "Lampu Off";
+            }
+        }
+
+        // Toggle LDR Sensor
+        function toggleLdr() {
+            if (!masterPower) return;
+            const statusEl = document.getElementById('ldr-status');
+            const luxEl = document.getElementById('ldr-lux');
+            const iconBg = document.getElementById('ldr-icon-bg');
+            const icon = document.getElementById('ldr-icon');
+
+            if(state.ldr === 'PAGI') {
+                state.ldr = 'MALAM';
+                statusEl.textContent = 'MALAM';
+                statusEl.className = 'text-base font-bold text-indigo-600 dark:text-indigo-400 tracking-wide';
+                luxEl.textContent = '15 Lux';
+                iconBg.className = 'w-10 h-10 rounded-xl bg-indigo-500/20 text-indigo-600 dark:text-indigo-400 flex items-center justify-center';
+                icon.className = 'fa-solid fa-moon text-lg';
+            } else {
+                state.ldr = 'PAGI';
+                statusEl.textContent = 'PAGI';
+                statusEl.className = 'text-base font-bold text-amber-500 dark:text-amber-400 tracking-wide';
+                luxEl.textContent = '450 Lux';
+                iconBg.className = 'w-10 h-10 rounded-xl bg-amber-500/20 text-amber-500 dark:text-amber-400 flex items-center justify-center';
+                icon.className = 'fa-solid fa-sun text-lg';
+            }
+        }
+
+        // Toggle IR Gate Sensor
+        function toggleGate() {
+            if (!masterPower) return;
+            const statusEl = document.getElementById('gate-status');
+            const signalEl = document.getElementById('gate-signal');
+            const iconBg = document.getElementById('gate-icon-bg');
+            const icon = document.getElementById('gate-icon');
+
+            if(state.gate === 'TERTUTUP') {
+                state.gate = 'TERBUKA';
+                statusEl.textContent = 'TERBUKA';
+                statusEl.className = 'text-base font-bold text-rose-600 dark:text-rose-500 tracking-wide';
+                signalEl.textContent = 'Bahaya / Jalur Putus';
+                signalEl.className = 'text-xs text-rose-600 dark:text-rose-400 font-bold';
+                iconBg.className = 'w-10 h-10 rounded-xl bg-rose-500/20 text-rose-600 dark:text-rose-500 flex items-center justify-center';
+                icon.className = 'fa-solid fa-door-open text-lg';
+            } else {
+                state.gate = 'TERTUTUP';
+                statusEl.textContent = 'TERTUTUP';
+                statusEl.className = 'text-base font-bold text-emerald-600 dark:text-emerald-400 tracking-wide';
+                signalEl.textContent = 'Aman / Terhubung';
+                signalEl.className = 'text-xs text-emerald-600 dark:text-emerald-400 font-bold';
+                iconBg.className = 'w-10 h-10 rounded-xl bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 flex items-center justify-center';
+                icon.className = 'fa-solid fa-door-closed text-lg';
+            }
+        }
+
+        // Periodic random fluctuations for environment sensors while power is ON
+        setInterval(() => {
+            if (!masterPower) return;
+            let temp = (27 + Math.random() * 2).toFixed(1);
+            let hum = Math.floor(60 + Math.random() * 10);
+            
+            document.getElementById('temp-value').innerHTML = `${temp} <span class="text-lg font-medium text-slate-400">°C</span>`;
+            document.getElementById('hum-value').innerHTML = `${hum} <span class="text-lg font-medium text-slate-400">%</span>`;
+            
+            document.getElementById('temp-bar').style.width = ((temp - 20) / 20 * 100) + '%';
+            document.getElementById('hum-bar').style.width = hum + '%';
+        }, 5000);
+    </script>
+</body>
+</html>
